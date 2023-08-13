@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_424426_async.snPromise</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>Based on https://github.com/taylorhakes/promise-polyfill</description>
+        <name>snPromise</name>
+        <script><![CDATA[class snPromise {
+	constructor (fn) {
+		if (!(this instanceof snPromise))
+			throw new TypeError('Promises must be constructed via new');
+		if (typeof fn !== 'function') throw new TypeError('not a function');
+		/** @type {!number} */
+		this._state = 0;
+		/** @type {!boolean} */
+		this._handled = false;
+		/** @type {Promise|undefined} */
+		this._value = undefined;
+		/** @type {!Array<!Function>} */
+		this._deferreds = [];
+
+		snPromise.#doResolve(fn, this);
+	}
+	
+	static #noop = function () {};
+
+	static #handle(self, deferred) {
+		while (self._state === 3) {
+			self = self._value;
+		}
+		if (self._state === 0) {
+			self._deferreds.push(deferred);
+			return;
+		}
+		self._handled = true;
+		x_424426_async.setTimeout(function() {
+			var cb = self._state === 1 ? deferred.onFulfilled : deferred.onRejected;
+			if (cb === null) {
+				(self._state === 1 ? snPromise.#resolve : snPromise.#reject)(deferred.promise, self._value);
+				return;
+			}
+			var ret;
+			try {
+				ret = cb(self._value);
+			} catch (e) {
+				snPromise.#reject(deferred.promise, e);
+				return;
+			}
+			snPromise.#resolve(deferred.promise, ret);
+		});
+	}
+
+	static #resolve(self, newValue) {
+		try {
+			// Promise Resolution Procedure: https://github.com/promises-aplus/promises-spec#the-promise-resolution-procedure
+			if (newValue === self)
+				throw new TypeError('A promise cannot be resolved with itself.');
+			if (
+				newValue &&
+				(typeof newValue === 'object' || typeof newValue === 'function')
+			) {
+				var then = newValue.then;
+				if (newValue instanceof snPromise) {
+					self._state = 3;
+					self._value = newValue;
+					snPromise.#finale(self);
+					return;
+				} else if (typeof then === 'function') {
+					snPromise.#doResolve(bind(then, newValue), self);
+					return;
+				}
+			}
+			self._state = 1;
+			self._value = newValue;
+			snPromise.#finale(self);
+		} catch (e) {
+			snPromise.#reject(self, e);
+		}
+	}
+
+	static #reject(self, newValue) {
+		self._state = 2;
+		self._value = newValue;
+		snPromise.#finale(self);
+	}
+
+	static #finale(self) {
+		if (self._state === 2 && self._deferreds.length === 0) {
+			x_424426_async.setTimeout(function() {
+				if (!self._handled) {
+					gs.warn('Possible Unhandled snPromise Rejection:' + self._value);
+				}
+			});
+		}
+
+		for (var i = 0, len = self._deferreds.length; i < len; i++) {
+			snPromise.#handle(self, self._deferreds[i]);
+		}
+		self._deferreds = null;
+	}
+	
+	static #doResolve(fn, self) {
+		var done = false;
+		try {
+			fn(
+				function(value) {
+					if (done) return;
+					done = true;
+					snPromise.#resolve(self, value);
+				},
+				function(reason) {
+					if (done) return;
+					done = true;
+					snPromise.#reject(self, reason);
+				}
+			);
+		} catch (ex) {
+			if (done) return;
+			done = true;
+			snPromise.#reject(self, ex);
+		}
+	}
+	
+	catch(onRejected) {
+		return this.then(null, onRejected);
+	}
+
+	then(onFulfilled, onRejected) {
+		// @ts-ignore
+		var prom = new this.constructor(snPromise.#noop);
+
+		snPromise.#handle(this, {
+			onFulfilled: typeof onFulfilled === 'function' ? onFulfilled : null,
+			onRejected: typeof onRejected === 'function' ? onRejected : null,
+			promise: prom
+		});
+			
+		return prom;
+	}
+
+	finally(callback) {
+		var constructor = this.constructor;
+		return this.then(
+			function(value) {
+				return constructor.resolve(callback()).then(function() {
+					return value;
+				});
+			},
+			function(reason) {
+				return constructor.resolve(callback()).then(function() {
+					return constructor.reject(reason);
+				});
+			}
+		);
+	}
+
+	static all(arr) {
+		return new snPromise(function(resolve, reject) {
+			if (!arr || typeof arr.length === "undefined") {
+				return reject(new TypeError('Promise.all accepts an array'));
+			}
+
+			var args = Array.prototype.slice.call(arr);
+			if (args.length === 0) return resolve([]);
+			var remaining = args.length;
+
+			function res(i, val) {
+				try {
+					if (val && (typeof val === 'object' || typeof val === 'function')) {
+						var then = val.then;
+						if (typeof then === 'function') {
+							then.call(
+								val,
+								function(val) {
+									res(i, val);
+								},
+								reject
+							);
+							return;
+						}
+					}
+					args[i] = val;
+					if (--remaining === 0) {
+						resolve(args);
+					}
+				} catch (ex) {
+					reject(ex);
+				}
+			}
+
+			for (var i = 0; i < args.length; i++) {
+				res(i, args[i]);
+			}
+		});
+	}
+
+	static any(arr) {
+		return new snPromise(function(resolve, reject) {
+			if (!arr || typeof arr.length === "undefined") {
+				return snPromise.#reject(new TypeError('snPromise.any accepts an array'));
+			}
+
+			var args = Array.prototype.slice.call(arr);
+			if (args.length === 0) return snPromise.#reject();
+
+			var rejectionReasons = [];
+			for (var i = 0; i < args.length; i++) {
+				try {
+					snPromise.resolve(args[i])
+						.then(resolve)
+						.catch(function(error) {
+						rejectionReasons.push(error);
+						if (rejectionReasons.length === args.length) {
+							const err = new Error('All promises were rejected');
+							err.errors = rejectionReasons;
+							reject(err);
+						}
+					});
+				} catch (ex) {
+					reject(ex);
+				}
+			}
+		});
+	}
+
+	static allSettled(arr) {
+		return new snPromise(function(resolve, reject) {
+			if (!arr || typeof arr.length === 'undefined') {
+				return reject(
+					new TypeError(typeof arr + ' ' + arr + ' is not iterable(cannot read property Symbol(Symbol.iterator))')
+				);
+			}
+			var args = Array.prototype.slice.call(arr);
+			if (args.length === 0) return resolve([]);
+			var remaining = args.length;
+
+			function res(i, val) {
+				if (val && (typeof val === 'object' || typeof val === 'function')) {
+					var then = val.then;
+					if (typeof then === 'function') {
+						then.call(
+							val,
+							function(val) {
+								res(i, val);
+							},
+							function(e) {
+								args[i] = { status: 'rejected', reason: e };
+								if (--remaining === 0) {
+									resolve(args);
+								}
+							}
+						);
+						return;
+					}
+				}
+				args[i] = { status: 'fulfilled', value: val };
+				if (--remaining === 0) {
+					resolve(args);
+				}
+			}
+
+			for (var i = 0; i < args.length; i++) {
+				res(i, args[i]);
+			}
+		});
+	}
+
+	static resolve(value) {
+		if (value && typeof value === 'object' && value.constructor === snPromise) {
+			return value;
+		}
+
+		return new snPromise(function(resolve) {
+			resolve(value);
+		});
+	}
+
+	static reject(value) {
+	  return new snPromise(function(resolve, reject) {
+		reject(value);
+	  });
+	}
+
+	static race(arr) {
+	  return new snPromise(function(resolve, reject) {
+		if (!arr || typeof arr.length === 'undefined') {
+		  return reject(new TypeError('Promise.race accepts an array'));
+		}
+
+		for (var i = 0, len = arr.length; i < len; i++) {
+		  snPromise.resolve(arr[i]).then(resolve, reject);
+		}
+	  });
+	}
+}]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2023-08-13 09:54:21</sys_created_on>
+        <sys_id>dc6cdfbe97e4b110d70ef207f053af75</sys_id>
+        <sys_mod_count>14</sys_mod_count>
+        <sys_name>snPromise</sys_name>
+        <sys_package display_value="Lib Async" source="x_424426_async">1bcc5eba97d03510d70ef207f053afa0</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Lib Async">1bcc5eba97d03510d70ef207f053afa0</sys_scope>
+        <sys_update_name>sys_script_include_dc6cdfbe97e4b110d70ef207f053af75</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-08-13 11:05:07</sys_updated_on>
+    </sys_script_include>
+</record_update>

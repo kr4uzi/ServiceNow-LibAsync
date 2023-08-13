@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_424426_async.SleepExt</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>Implements extension point x_424426_async.SleepExt</description>
+        <name>SleepExt</name>
+        <script><![CDATA[var SleepExt = Class.create();
+SleepExt.prototype = {
+    initialize: function() {
+		
+    },
+
+    sleep: function (ms) {
+		var scriptGr = new GlideRecord("sys_rte_eb_script_operation");
+		// Using a dummy RTE Script Operation record which is shipped with this scoped app
+		scriptGr.addQuery("sys_id", "fcf29a8a97203110d70ef207f053af45");
+		scriptGr.setLimit(1);
+		scriptGr.query();
+		if (scriptGr.next()) {
+			scriptGr.sys_scope = "global";
+			scriptGr.script = "gs.sleep(ms)";
+
+			var gse = GlideScopedEvaluator();
+			gse.evaluateScript(scriptGr, "script", { ms: ms });
+		}
+	},
+
+    type: 'SleepExt'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2023-08-12 09:45:20</sys_created_on>
+        <sys_id>fac0de6697a07110d70ef207f053afd8</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>SleepExt</sys_name>
+        <sys_package display_value="Lib Async" source="x_424426_async">1bcc5eba97d03510d70ef207f053afa0</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Lib Async">1bcc5eba97d03510d70ef207f053afa0</sys_scope>
+        <sys_update_name>sys_script_include_fac0de6697a07110d70ef207f053afd8</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-08-12 09:46:02</sys_updated_on>
+    </sys_script_include>
+</record_update>

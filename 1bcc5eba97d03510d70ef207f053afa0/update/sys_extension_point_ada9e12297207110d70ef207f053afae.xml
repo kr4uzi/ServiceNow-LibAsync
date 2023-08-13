@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_extension_point">
+    <sys_extension_point action="INSERT_OR_UPDATE">
+        <api_name>x_424426_async.QueryExt</api_name>
+        <description/>
+        <example><![CDATA[var QueryExt = Class.create();
+QueryExt.prototype = {
+    initialize: function() {
+		
+    },
+
+	/**
+	 * Wether this Extension Point can query on the given table
+	 * without creating additional cross scope privileges
+	 *
+	 * @param {string} table - the table's name (not label!)
+	 * @returns {boolean}
+	 */
+	handlesTable: function (table) {
+		var currentScopeName = gs.getCurrentScopeName();
+		if (table.startsWith(currentScopeName + '_')) {
+			// Note: While this check might be correct in most cases,
+			// this *must* be adjusted if you have opverlapping scopenames!
+			// Also this check always fails for global scoped tables
+			return true;
+		}
+		
+		// fallback: simply check the table's scope
+		var tableGr = new GlideRecord('sys_db_object');
+		tableGr.addQuery('sys_scope.scope', currentScopeName == 'rhino.global' ? 'global' : currentScopeName);
+		tableGr.addQuery('name', table);
+		tableGr.setLimit(1);
+		tableGr.query();
+		return tableGr.hasNext();
+	},
+	
+	queryOne: function (table, encodedQuery) {
+		var anyGr = new GlideRecord(table);
+		anyGr.addEncodedQuery(encodedQuery);
+		anyGr.setLimit(1);
+		return anyGr;
+	},
+
+    type: 'QueryExt'
+};]]></example>
+        <name>QueryExt</name>
+        <restrict_scope>false</restrict_scope>
+        <sys_class_name>sys_extension_point</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2023-08-12 07:01:01</sys_created_on>
+        <sys_id>ada9e12297207110d70ef207f053afae</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>QueryExt</sys_name>
+        <sys_package display_value="Lib Async" source="x_424426_async">1bcc5eba97d03510d70ef207f053afa0</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Lib Async">1bcc5eba97d03510d70ef207f053afa0</sys_scope>
+        <sys_update_name>sys_extension_point_ada9e12297207110d70ef207f053afae</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-08-12 13:30:12</sys_updated_on>
+    </sys_extension_point>
+</record_update>

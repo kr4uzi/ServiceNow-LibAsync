@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_424426_async.Task</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>Task</name>
+        <script><![CDATA[/* global Class, GlideScriptedHierarchicalWorker, GlideScriptedExtensionPoint, GlideRecord, gs */
+/* eslint no-undef: "error" */
+var Task = Class.create();
+Task.prototype = {
+    initialize: function (fn) {
+		if (fn) {
+			this._loadExtension("SleepExt");
+			this._func = fn;
+			this._running = true;
+			
+			// Note: this will call the Task::initialize function without arguments!
+			const worker = new GlideScriptedHierarchicalWorker();
+			worker.setProgressName("x_424426_async.Task");
+			worker.setScriptIncludeName("x_424426_async.Task");
+			worker.setScriptIncludeMethod("_exec");
+			worker.putMethodArg("task", this);		
+			worker.setBackground(true);
+			worker.start();
+			this._progress_id = worker.getProgressID();
+		}
+    },
+	
+	// _exec is *always* run in a background thread (via GlideScriptedHierarchicalWorker)
+	_exec: function (task) {
+		try {
+			task.result = task._func();
+		} catch (e) {
+			task.error = e;
+		} finally {
+			task._running = false;
+		}
+	},
+	
+	_loadExtension: function (extensionName) {
+		this._ext = this._ext || {};
+		
+		const extensionPoints = new GlideScriptedExtensionPoint().getExtensions(extensionName);
+		if (extensionPoints.length) {
+			// always use the extension point with the lowest order
+			extensionPoints[0].initialize();
+			this._ext[extensionName] = extensionPoints[0];
+		} else {
+			throw new Error("No Extension Point Implementation for '" + extensionName + "'");
+		}
+	},
+	
+	wait: function (timeout) {
+		let waitTime = 0;
+		while (this._running) {
+			this._ext["SleepExt"].sleep(100);
+			waitTime += 100;
+			
+			if (timeout && waitTime > timeout) {
+				throw new Error("Timeout");
+			}
+		}
+		
+		if (this.error) {
+			throw this.error;
+		} else {
+			return this.result;
+		}
+		
+// 		const progressGr = new GlideRecord("sys_progress_worker");
+// 		progressGr.addQuery("sys_id", this._progress_id);
+// 		progressGr.setLimit(1);
+// 		progressGr.query();
+// 		if (progressGr.next()) {
+// 			let waitTime = 0;
+// 			while (progressGr.state != "complete") {
+// 				this._ext["SleepExt"].sleep(20);
+// 				gs.info("sleeping");
+// 				waitTime += 20;
+// 				if (timeout && waitTime > timeout) {
+// 					throw new Error("Timeout");
+// 				}
+				
+// 				progressGr.query();
+// 				progressGr.next();
+// 			}
+			
+// 			if (progressGr.state_code == "success") {
+// 				return this.result;
+// 			} else if (progressGr.state_code == "error") {
+// 				throw this.error;
+// 			}
+			
+// 			throw new Error("Unknown Status: " + progressGr.state_code);
+// 		} else {
+// 			throw new Error("No Progress Worker with Sys ID '" + this._progress_id + "' found!");
+// 		}
+	},
+
+    type: "Task"
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2023-08-12 13:07:59</sys_created_on>
+        <sys_id>91f97aa697647110d70ef207f053afc8</sys_id>
+        <sys_mod_count>22</sys_mod_count>
+        <sys_name>Task</sys_name>
+        <sys_package display_value="Lib Async" source="x_424426_async">1bcc5eba97d03510d70ef207f053afa0</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Lib Async">1bcc5eba97d03510d70ef207f053afa0</sys_scope>
+        <sys_update_name>sys_script_include_91f97aa697647110d70ef207f053afc8</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-08-12 21:19:05</sys_updated_on>
+    </sys_script_include>
+</record_update>

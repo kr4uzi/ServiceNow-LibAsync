@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_424426_async.setTimeout</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>setTimeout</name>
+        <script><![CDATA[function setTimeout(fn, ms, ...args) {
+	if (ms) {
+		const extensionPoints = new GlideScriptedExtensionPoint().getExtensions("SleepExt");
+		if (extensionPoints.length == 0) {
+			throw new Error("No Extension Point Implementation for 'SleepExt'");
+		}
+	}
+	
+	const worker = new GlideScriptedHierarchicalWorker();
+	worker.setProgressName("x_424426_async.setTimeout");
+	worker.setScriptIncludeName("x_424426_async.setTimeoutImpl");
+	worker.setScriptIncludeMethod("_exec");
+	worker.putMethodArg("context", {
+		func: fn,
+		timeout: ms,
+		args: args
+	});
+	worker.setBackground(true);
+	worker.start();
+}]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2023-08-13 09:49:03</sys_created_on>
+        <sys_id>05aa177e97e4b110d70ef207f053afd0</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>setTimeout</sys_name>
+        <sys_package display_value="Lib Async" source="x_424426_async">1bcc5eba97d03510d70ef207f053afa0</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Lib Async">1bcc5eba97d03510d70ef207f053afa0</sys_scope>
+        <sys_update_name>sys_script_include_05aa177e97e4b110d70ef207f053afd0</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-08-13 10:24:15</sys_updated_on>
+    </sys_script_include>
+</record_update>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_script">
+    <sys_ui_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description/>
+        <global>false</global>
+        <ignore_in_now_experience>false</ignore_in_now_experience>
+        <name>x_424426_async.Util</name>
+        <script><![CDATA[var x_424426_async = x_424426_async || {};
+x_424426_async.Util = (function() {
+	"use strict";
+	
+	/* global Promise */
+	/* eslint no-undef: "error" */
+	// GlideExecutionTracker.getProgressID() returns a sys_id on sys_progress_worker
+	// a corresponding record on sys_execution_tracker with the same (!) sys_id exists as well
+	// the latter record contains the detailed information (progress percentage, result, message)
+
+	return {
+		toPromise: function (asyncResultString) {
+			return new Promise(function (resolve, reject) {
+				var asyncResult = JSON.parse(asyncResultString);
+				if (asyncResult.type == 'x_424426_async_v1') {
+					
+				}
+			});
+		},
+		type: "Util"
+	};
+})();
+]]></script>
+        <script_name>Util</script_name>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2023-07-31 19:22:27</sys_created_on>
+        <sys_id>5ebd5e3e97d03510d70ef207f053af07</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>x_424426_async.Util</sys_name>
+        <sys_package display_value="Lib Async" source="x_424426_async">1bcc5eba97d03510d70ef207f053afa0</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Lib Async">1bcc5eba97d03510d70ef207f053afa0</sys_scope>
+        <sys_update_name>sys_ui_script_5ebd5e3e97d03510d70ef207f053af07</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-08-11 22:28:23</sys_updated_on>
+        <ui_type>0</ui_type>
+        <use_scoped_format>true</use_scoped_format>
+    </sys_ui_script>
+</record_update>
